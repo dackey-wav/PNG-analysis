@@ -16,7 +16,7 @@ from chunktypes import (
     TYPE_tRNS,
     TYPE_zTXt,
 )
-from chunks.ancillary import parse_ancillary
+from chunks.ancillary import ChunkExif, parse_ancillary
 from parser import parse_png, parse_png_lenient
 from tests.pngsuite_catalog import (
     CATEGORY_ORDER,
@@ -237,7 +237,7 @@ def test_ancillary_chunks(path):
     if name.startswith("exif"):
         assert TYPE_eXIf in ancillary_types
         parsed = parse_ancillary(TYPE_eXIf, result.chunks_of_type(TYPE_eXIf)[0].data, 0)
-        assert "eXIf" in str(parsed)
+        assert isinstance(parsed, ChunkExif)
     elif name.startswith(("cm0", "cm7", "cm9")):
         assert TYPE_tIME in ancillary_types
     elif name.startswith(("ct1", "cte", "ctf", "ctg", "cth", "ctj")):

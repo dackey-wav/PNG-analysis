@@ -1,3 +1,5 @@
+from console import field_line, label
+
 PIXEL_LEN = 3
 
 
@@ -12,10 +14,10 @@ class ChunkPLTE:
             self.palette.append(pixel)
 
     def __str__(self) -> str:
-        lines = [f"PLTE: {len(self.palette)} entries"]
+        lines = [field_line("Entries", str(len(self.palette)))]
         for i, pixel in enumerate(self.palette[:5]):
             r, g, b = pixel
-            lines.append(f"  [{i}] RGB({r}, {g}, {b})")
+            lines.append(f"  {label(f'[{i}]')} RGB({r}, {g}, {b})")
         if len(self.palette) > 5:
-            lines.append(f"  ... ({len(self.palette) - 5} more)")
+            lines.append(f"  {label('...')} ({len(self.palette) - 5} more)")
         return "\n".join(lines)

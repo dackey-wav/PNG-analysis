@@ -1,4 +1,5 @@
 from chunktypes import TYPE_IDAT
+from console import field_line
 
 
 def format_idat_summary(chunks) -> str:
@@ -9,7 +10,10 @@ def format_idat_summary(chunks) -> str:
         first_bytes = idat_data[0][:2].hex(" ")
     else:
         first_bytes = "n/a"
-    return (
-        f"IDAT: {count} chunk(s), {total} bytes compressed\n"
-        f"First bytes: {first_bytes}"
+    return "\n".join(
+        [
+            field_line("Chunks", str(count)),
+            field_line("Compressed size", f"{total} bytes"),
+            field_line("First bytes", first_bytes),
+        ]
     )

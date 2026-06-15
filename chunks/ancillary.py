@@ -14,7 +14,7 @@ from chunktypes import (
     TYPE_zTXt,
     TYPE_tIME
 )
-from color import Color
+from console import field_line, warn
 
 
 class ChunkUnknownAncillary:
@@ -24,13 +24,14 @@ class ChunkUnknownAncillary:
         self.crc = crc
 
     def __str__(self) -> str:
-        name = self.type.decode("latin-1", "replace")
         preview = self.data[:16].hex(" ")
         if len(self.data) > 16:
             preview += " ..."
-        return (
-            f"{name}: {len(self.data)} bytes (not parsed)\n"
-            f"  hex preview: {preview}"
+        return "\n".join(
+            [
+                field_line("Size", f"{len(self.data)} bytes (not parsed)"),
+                field_line("Hex preview", preview),
+            ]
         )
 
 
@@ -57,9 +58,9 @@ class ChunkPhys:
             unit = f"unknown ({self.unit})"
             dpi = ""
 
-        return (
-            f"{Color.text}pHYs:{Color.reset} "
-            f"{self.px_per_unit_x} × {self.px_per_unit_y} pixels per {unit}{dpi}"
+        return field_line(
+            "Resolution",
+            f"{self.px_per_unit_x} × {self.px_per_unit_y} pixels per {unit}{dpi}",
         )
 
 
@@ -77,7 +78,12 @@ class ChunkText:
             self.text = data.decode("latin-1", "replace")
 
     def __str__(self) -> str:
-        return f"{Color.text}tEXt:{Color.reset} {self.key}: {self.text}"
+        return "\n".join(
+            [
+                field_line("Keyword", self.key or "(none)"),
+                field_line("Text", self.text),
+            ]
+        )
 
 
 class ChunkZtxt:
@@ -94,11 +100,12 @@ class ChunkZtxt:
         self.text = zlib.decompress(rest[1:]).decode("latin-1", "replace")
 
     def __str__(self) -> str:
-        return (
-            f"{Color.text}zTXt:{Color.reset}\n"
-            f"  Key: {self.key}\n"
-            f"  Method: {self.method}\n"
-            f"  Text: {self.text}"
+        return "\n".join(
+            [
+                field_line("Keyword", self.key),
+                field_line("Method", str(self.method)),
+                field_line("Text", self.text),
+            ]
         )
 
 
@@ -109,7 +116,7 @@ class ChunkBkgd:
         self.crc = crc
 
     def __str__(self) -> str:
-        return f"{Color.text}bKGD:{Color.reset} {self.data.hex(' ')}"
+        return field_line("Data", self.data.hex(" "))
 
 
 class ChunkItxt:
@@ -171,18 +178,21 @@ class ChunkItxt:
                 b64_str += "..."
             preview = f"base64:{b64_str}"
 
-        exif_note = ""
-        keyword_lower = self.keyword.lower()
-        if "exif" in keyword_lower or "raw profile" in keyword_lower:
-            exif_note = "\n      (possible embedded EXIF profile)"
+        has_exif_hint = "exif" in self.keyword.lower() or "raw profile" in self.keyword.lower()
 
-        return (
-            f"{Color.text}iTXt:{Color.reset} keyword='{self.keyword}'\n"
-            f"      language='{self.language_tag}'\n"
-            f"      translated keyword='{self.translated_keyword}'\n"
-            f"      text preview: {preview}\n"
-            f"      decoded size: {decoded_size} bytes"
-            f"{exif_note}"
+        return "\n".join(
+            [
+                field_line("Keyword", self.keyword),
+                field_line("Language", self.language_tag),
+                field_line("Translated keyword", self.translated_keyword),
+                field_line("Text preview", preview),
+                field_line("Decoded size", f"{decoded_size} bytes"),
+            ]
+            + (
+                [field_line("Note", "possible embedded EXIF profile")]
+                if has_exif_hint
+                else []
+            )
         )
 
 
@@ -213,29 +223,30 @@ class ChunkExif:
 
     def __str__(self) -> str:
         if self.error:
-            return f"{Color.text}eXIf:{Color.reset} {self.error}"
+            return warn(f"eXIf: {self.error}")
 
         endian_name = "little-endian" if self.endian == "<" else "big-endian"
         magic_ok = "ok" if self.magic == 0x002A else "unexpected"
-        return (
-            f"{Color.text}eXIf:{Color.reset} {len(self.data)} bytes, "
-            f"{endian_name} ({self.data[:2]!r})\n"
-            f"      TIFF magic: 0x{self.magic:04X} ({magic_ok})\n"
-            f"      IFD offset: {self.ifd_offset}"
+        return "\n".join(
+            [
+                field_line("Size", f"{len(self.data)} bytes"),
+                field_line("Endian", f"{endian_name} ({self.data[:2]!r})"),
+                field_line("TIFF magic", f"0x{self.magic:04X} ({magic_ok})"),
+                field_line("IFD offset", str(self.ifd_offset)),
+            ]
         )
 
 
 class ChunkTime:
-    def __init__(self, type_: bytes, data: bytes, crc: bytes) -> None:
+    def __init__(self, type_: bytes, data: bytes, crc: int) -> None:
         self.type = type_
         self.crc = crc
 
-        values = struct.unpack('>HBBBBB', data)
+        values = struct.unpack(">HBBBBB", data)
         self.datetime = datetime.datetime(*values)
 
     def __str__(self) -> str:
-        date = self.datetime.strftime('%c')
-        return f'{Color.text}Date: {date}{Color.reset}'
+        return field_line("Modified", self.datetime.strftime("%c"))
 
 
 _ANCILLARY_PARSERS = {
@@ -270,4 +281,4 @@ def parse_ancillary(
         return parser(chunk_type, data, crc)
     except Exception as exc:
         name = chunk_type.decode("latin-1", "replace")
-        return f"{name}: parse error: {exc}"
+        return warn(f"{name}: parse error: {exc}")

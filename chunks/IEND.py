@@ -1,3 +1,6 @@
+from console import field_line
+
+
 class ChunkIEND:
     def __init__(self, type_: bytes, data: bytes, crc: int) -> None:
         self.type = type_
@@ -5,4 +8,4 @@ class ChunkIEND:
         self.crc = crc
 
     def __str__(self) -> str:
-        return "IEND: end of PNG stream (empty data)"
+        return field_line("Status", "end of PNG stream (empty data)")

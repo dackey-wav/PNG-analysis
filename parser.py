@@ -1,5 +1,3 @@
-"""Low-level PNG parsing used by the inspector and tests."""
-
 from __future__ import annotations
 
 import os
